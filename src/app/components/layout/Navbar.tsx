@@ -19,7 +19,7 @@ type NavbarProps = {
 
 const links = [
   { href: "/", label: "Home", authOnly: false },
-  { href: "/menu", label: "Browse menu", authOnly: false },
+  { href: "/menu-items", label: "Browse menu", authOnly: false },
   { href: "/dashboard", label: "Dashboard", authOnly: true },
 ];
 
