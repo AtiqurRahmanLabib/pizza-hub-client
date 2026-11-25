@@ -1,14 +1,17 @@
 "use client";
 
 // Route: app/dashboard/vendor/add-menu-item/page.tsx
-// No functionality yet: submitting only console.logs the form values.
+// Submits the form to your API through postItem().
 
+import { useState } from "react";
 import Link from "next/link";
 import { Bowlby_One, Figtree } from "next/font/google";
 import { ArrowRight, ChevronDown, CircleUserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/toast";
+import { postItem } from "@/lib/actions/postItems";
 
 const display = Bowlby_One({ subsets: ["latin"], weight: "400" });
 const body = Figtree({ subsets: ["latin"] });
@@ -28,10 +31,54 @@ const field =
   "focus-visible:border-[#26213A] focus-visible:ring-0 focus-visible:shadow-[3px_3px_0_#F2B33D]";
 
 export default function AddMenuItemPage() {
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
-    console.log(data);
+
+    const form = e.currentTarget;
+    const raw = Object.fromEntries(new FormData(form).entries());
+
+    const item = {
+      name: String(raw.name).trim(),
+      category: String(raw.category),
+      description: String(raw.description).trim(),
+      price: Number(raw.price),
+      location: String(raw.location).trim(),
+      image: String(raw.image || "").trim(),
+    };
+
+    if (!Number.isFinite(item.price) || item.price <= 0) {
+      toast.add({
+        type: "error",
+        title: "Invalid price",
+        description: "Please enter a valid price.",
+      });
+      return;
+    }
+
+    setPending(true);
+
+    try {
+      await postItem(item);
+
+      toast.add({
+        type: "success",
+        title: "Submitted for review!",
+        description: "Your menu item is waiting for admin approval.",
+      });
+
+      form.reset();
+    } catch (err) {
+      toast.add({
+        type: "error",
+        title: "Could not add item",
+        description:
+          err instanceof Error ? err.message : "Something went wrong",
+      });
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -174,10 +221,13 @@ export default function AddMenuItemPage() {
 
           <Button
             type="submit"
-            className="group h-10 rounded-lg border-2 border-[#26213A] bg-[#E8452C] px-5 text-sm font-extrabold text-white shadow-[3px_3px_0_#26213A] transition-all hover:bg-[#E8452C] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+            disabled={pending}
+            className="group h-10 rounded-lg border-2 border-[#26213A] bg-[#E8452C] px-5 text-sm font-extrabold text-white shadow-[3px_3px_0_#26213A] transition-all hover:bg-[#E8452C] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-60"
           >
-            Submit for review
-            <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
+            {pending ? "Submitting…" : "Submit for review"}
+            {!pending && (
+              <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
+            )}
           </Button>
         </form>
       </section>

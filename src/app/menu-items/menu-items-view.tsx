@@ -17,9 +17,8 @@ import {
   Star,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { MenuItem } from "@/lib/types/menu-item";
-import { toast } from "@/components/ui/toast";
-// import type { MenuItem } from "@/lib/types/menu-item";
+import type { MenuItem } from "@/lib/types/menu-item";
+import Image from "next/image";
 
 const display = Bowlby_One({ subsets: ["latin"], weight: "400" });
 const body = Figtree({ subsets: ["latin"] });
@@ -69,26 +68,21 @@ export default function MenuItemsView({
         (location === "all" || i.location === location) &&
         (!q ||
           i.name.toLowerCase().includes(q) ||
-          i.pizzeria.toLowerCase().includes(q)),
+          i.pizzeria?.toLowerCase().includes(q)),
     );
     if (sort === "price-asc") list.sort((a, b) => a.price - b.price);
     if (sort === "price-desc") list.sort((a, b) => b.price - a.price);
-    if (sort === "rating") list.sort((a, b) => b.rating - a.rating);
+    if (sort === "rating")
+      list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     return list;
   }, [items, query, location, sort, category]);
 
-  function toggleLike(item: MenuItem) {
-    const nextLiked = !liked.has(item._id);
+  function toggleLike(id: MenuItem["_id"]) {
     setLiked((prev) => {
       const next = new Set(prev);
-      if (next.has(item._id)) next.delete(item._id);
-      else next.add(item._id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
-    });
-    toast.add({
-      type: "success",
-      title: nextLiked ? "Saved to favorites" : "Removed from favorites",
-      description: item.name,
     });
   }
 
@@ -237,17 +231,25 @@ export default function MenuItemsView({
                   className={`${ink} group flex flex-col overflow-hidden rounded-3xl bg-[#FFFCF6] shadow-[6px_6px_0_#26213A] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[9px_9px_0_#26213A]`}
                 >
                   <div className="relative aspect-[4/3] w-full shrink-0 border-b-2 border-[#26213A] bg-[#F2B33D]/30">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="absolute inset-0 size-full object-cover"
-                      loading="lazy"
-                    />
+                    {item.image?.trim() ? (
+                      <Image
+                        src={item.image.trim()}
+                        alt={item.name}
+                        width={600}
+                        height={600}
+                        quality={75}
+                        className="absolute inset-0 size-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                        No Image Available
+                      </div>
+                    )}
 
                     <button
                       type="button"
-                      onClick={() => toggleLike(item)}
+                      onClick={() => toggleLike(item._id)}
                       aria-pressed={isLiked}
                       aria-label={
                         isLiked
@@ -273,7 +275,7 @@ export default function MenuItemsView({
                     <span
                       className={`${display.className} ${ink} absolute -bottom-0 right-3 translate-y-1/2 rotate-3 rounded-xl bg-[#E8452C] px-3 py-1.5 text-lg text-white shadow-[3px_3px_0_#26213A]`}
                     >
-                      ${item.price.toFixed(2)}
+                      ${Number(item.price ?? 0).toFixed(2)}
                     </span>
                   </div>
 
@@ -288,11 +290,11 @@ export default function MenuItemsView({
                       <span
                         className={`${ink} grid size-10 shrink-0 place-items-center rounded-full bg-[#F2B33D] text-sm font-extrabold`}
                       >
-                        {item.pizzeria.charAt(0)}
+                        {item.pizzeria?.charAt(0) ?? "?"}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-bold">
-                          {item.pizzeria}
+                          {item.pizzeria ?? "Unknown pizzeria"}
                         </p>
                         <p className="flex items-center gap-1 text-xs text-[#26213A]/70">
                           <MapPin className="size-3.5 shrink-0" />
@@ -307,12 +309,12 @@ export default function MenuItemsView({
                           fill="currentColor"
                           strokeWidth={1.5}
                         />
-                        {item.rating.toFixed(1)}
+                        {(item.rating ?? 0).toFixed(1)}
                       </span>
                     </div>
 
                     <Link
-                      href={`/menu-items/${item._id}`}
+                      href={`/menu/${item._id}`}
                       className="mt-auto flex items-center justify-between rounded-xl border-t-2 border-dashed border-[#26213A]/25 pt-4 text-[15px] font-extrabold text-[#E8452C] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E8452C]"
                     >
                       View details
