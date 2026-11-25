@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { toast } from "@/components/ui/toast";
 
 type User = {
   name: string;
@@ -16,19 +17,19 @@ type NavbarProps = {
   cartCount?: number;
   onSignOut?: () => void;
 };
-
-const links = [
-  { href: "/", label: "Home", authOnly: false },
-  { href: "/menu-items", label: "Browse menu", authOnly: false },
-  { href: "/dashboard", label: "Dashboard", authOnly: true },
-];
-
-const dropdownItem =
-  "block rounded-xl px-4 py-2.5 text-sm font-semibold text-[#2B1A12] transition hover:bg-[#FFF4E3]";
-
 export default function Navbar({ cartCount = 0, onSignOut }: NavbarProps) {
   const { data: session } = authClient.useSession();
   const user = session?.user;
+
+  const links = [
+    { href: "/", label: "Home", authOnly: false },
+    { href: "/menu-items", label: "Browse menu", authOnly: false },
+    { href: `/dashboard/${user?.role}`, label: "Dashboard", authOnly: true },
+  ];
+
+  const dropdownItem =
+    "block rounded-xl px-4 py-2.5 text-sm font-semibold text-[#2B1A12] transition hover:bg-[#FFF4E3]";
+
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false); // mobile menu
   const [userOpen, setUserOpen] = useState(false); // user dropdown
@@ -37,7 +38,29 @@ export default function Navbar({ cartCount = 0, onSignOut }: NavbarProps) {
   const visibleLinks = links.filter((l) => !l.authOnly || user);
 
   const handleSignOut = async () => {
-    await authClient.signOut();
+    try {
+      const { error } = await authClient.signOut();
+      if (error) {
+        toast.add({
+          type: "error",
+          title: "Sign out failed",
+          description:
+            error.message ?? "Something went wrong. Please try again.",
+        });
+        return;
+      }
+      toast.add({
+        type: "success",
+        title: "Signed out",
+        description: "See you next time!",
+      });
+    } catch {
+      toast.add({
+        type: "error",
+        title: "Sign out failed",
+        description: "Something went wrong. Please try again.",
+      });
+    }
   };
 
   const isActive = (href: string) =>

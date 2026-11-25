@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { toast } from "@/components/ui/toast";
 // import { authClient } from "@/lib/auth-client";
 
 const display = Bowlby_One({ subsets: ["latin"], weight: "400" });
@@ -67,34 +68,59 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  type SignInData = {
-    email: string;
-    password: string;
-  };
+  const [pending, setPending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const { data, error } = await authClient.signIn.email({
-      email,
-      password,
-      callbackURL: "/",
-    });
+    setPending(true);
+    try {
+      const { data, error } = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/",
+      });
 
-    if (error) {
-      console.error("Sign in failed:", error.message);
-      return;
-    }
+      if (error) {
+        toast.add({
+          type: "error",
+          title: "Sign in failed",
+          description:
+            error.message ?? "Check your email and password and try again.",
+        });
+        return;
+      }
 
-    if (data) {
-      console.log("Sign in successful:", data);
+      if (data) {
+        toast.add({
+          type: "success",
+          title: "Welcome back!",
+          description: "You're signed in.",
+        });
+      }
+    } catch {
+      toast.add({
+        type: "error",
+        title: "Sign in failed",
+        description: "Something went wrong. Please try again.",
+      });
+    } finally {
+      setPending(false);
     }
   }
 
-  function handleSocial(provider: "google" | "github") {
-    // TODO: wire up Better Auth
-    // await authClient.signIn.social({ provider, callbackURL: "/" });
+  async function handleSocial(provider: "google" | "github") {
+    const { error } = await authClient.signIn.social({
+      provider,
+      callbackURL: "/",
+    });
+    if (error) {
+      toast.add({
+        type: "error",
+        title: "Sign in failed",
+        description: error.message ?? "Something went wrong. Please try again.",
+      });
+    }
   }
 
   return (
@@ -186,10 +212,13 @@ export default function SignIn() {
 
             <Button
               type="submit"
-              className="group h-14 w-full rounded-xl border-2 border-[#26213A] bg-[#E8452C] text-base font-extrabold text-white shadow-[5px_5px_0_#26213A] transition-all hover:bg-[#E8452C] active:translate-x-[5px] active:translate-y-[5px] active:shadow-none"
+              disabled={pending}
+              className="group h-14 w-full rounded-xl border-2 border-[#26213A] bg-[#E8452C] text-base font-extrabold text-white shadow-[5px_5px_0_#26213A] transition-all hover:bg-[#E8452C] active:translate-x-[5px] active:translate-y-[5px] active:shadow-none disabled:opacity-60"
             >
-              Sign in
-              <ArrowRight className="ml-1 size-5 transition-transform group-hover:translate-x-1" />
+              {pending ? "Signing in…" : "Sign in"}
+              {!pending && (
+                <ArrowRight className="ml-1 size-5 transition-transform group-hover:translate-x-1" />
+              )}
             </Button>
           </form>
 

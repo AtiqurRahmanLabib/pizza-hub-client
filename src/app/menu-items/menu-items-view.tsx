@@ -17,29 +17,12 @@ import {
   Star,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { MenuItem } from "@/lib/types/menu-item";
+import { toast } from "@/components/ui/toast";
+// import type { MenuItem } from "@/lib/types/menu-item";
 
 const display = Bowlby_One({ subsets: ["latin"], weight: "400" });
 const body = Figtree({ subsets: ["latin"] });
-
-export type MenuItem = {
-  id: string | number;
-  name: string;
-  category: string;
-  price: number;
-  image: string;
-  pizzeria: string;
-  location: string;
-  rating: number;
-};
-
-const categories = [
-  "Classic Pizzas",
-  "Vegetarian Pizzas",
-  "Meat Lovers",
-  "Specialty / Gourmet Pizzas",
-  "Sides & Appetizers",
-  "Beverages & Desserts",
-];
 
 type Sort = "featured" | "price-asc" | "price-desc" | "rating";
 
@@ -66,7 +49,12 @@ export default function MenuItemsView({
   const [location, setLocation] = useState("all");
   const [sort, setSort] = useState<Sort>("featured");
   const [category, setCategory] = useState("all");
-  const [liked, setLiked] = useState<Set<MenuItem["id"]>>(new Set());
+  const [liked, setLiked] = useState<Set<MenuItem["_id"]>>(new Set());
+
+  const categories = useMemo(
+    () => Array.from(new Set(items.map((i) => i.category))).sort(),
+    [items],
+  );
 
   const locations = useMemo(
     () => Array.from(new Set(items.map((i) => i.location))).sort(),
@@ -89,12 +77,18 @@ export default function MenuItemsView({
     return list;
   }, [items, query, location, sort, category]);
 
-  function toggleLike(id: MenuItem["id"]) {
+  function toggleLike(item: MenuItem) {
+    const nextLiked = !liked.has(item._id);
     setLiked((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(item._id)) next.delete(item._id);
+      else next.add(item._id);
       return next;
+    });
+    toast.add({
+      type: "success",
+      title: nextLiked ? "Saved to favorites" : "Removed from favorites",
+      description: item.name,
     });
   }
 
@@ -211,7 +205,7 @@ export default function MenuItemsView({
 
         {/* Grid */}
         {loading ? (
-          <ul className="mt-6 grid gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <ul className="mt-6 grid items-stretch gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {Array.from({ length: 6 }).map((_, i) => (
               <li
                 key={i}
@@ -234,26 +228,26 @@ export default function MenuItemsView({
             </p>
           </div>
         ) : (
-          <ul className="mt-6 grid gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <ul className="mt-6 grid items-stretch gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {visible.map((item) => {
-              const isLiked = liked.has(item.id);
+              const isLiked = liked.has(item._id);
               return (
                 <li
-                  key={item.id}
+                  key={item._id}
                   className={`${ink} group flex flex-col overflow-hidden rounded-3xl bg-[#FFFCF6] shadow-[6px_6px_0_#26213A] transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[9px_9px_0_#26213A]`}
                 >
-                  <div className="relative aspect-[4/3] border-b-2 border-[#26213A] bg-[#F2B33D]/30">
+                  <div className="relative aspect-[4/3] w-full shrink-0 border-b-2 border-[#26213A] bg-[#F2B33D]/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="size-full object-cover"
+                      className="absolute inset-0 size-full object-cover"
                       loading="lazy"
                     />
 
                     <button
                       type="button"
-                      onClick={() => toggleLike(item.id)}
+                      onClick={() => toggleLike(item)}
                       aria-pressed={isLiked}
                       aria-label={
                         isLiked
@@ -285,12 +279,12 @@ export default function MenuItemsView({
 
                   <div className="flex flex-1 flex-col p-5 pt-7">
                     <h3
-                      className={`${display.className} text-2xl leading-tight`}
+                      className={`${display.className} line-clamp-2 min-h-[3.25rem] text-2xl leading-tight`}
                     >
                       {item.name}
                     </h3>
 
-                    <div className="mt-4 flex items-center gap-3">
+                    <div className="mb-5 mt-4 flex items-center gap-3">
                       <span
                         className={`${ink} grid size-10 shrink-0 place-items-center rounded-full bg-[#F2B33D] text-sm font-extrabold`}
                       >
@@ -318,8 +312,8 @@ export default function MenuItemsView({
                     </div>
 
                     <Link
-                      href={`/menu/${item.id}`}
-                      className="mt-5 flex items-center justify-between rounded-xl border-t-2 border-dashed border-[#26213A]/25 pt-4 text-[15px] font-extrabold text-[#E8452C] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E8452C]"
+                      href={`/menu-items/${item._id}`}
+                      className="mt-auto flex items-center justify-between rounded-xl border-t-2 border-dashed border-[#26213A]/25 pt-4 text-[15px] font-extrabold text-[#E8452C] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E8452C]"
                     >
                       View details
                       <ArrowUpRight className="size-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

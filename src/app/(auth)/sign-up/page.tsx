@@ -99,29 +99,48 @@ export default function SignUp() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<Role>("customer");
+  const [pending, setPending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = Object.fromEntries(
       new FormData(e.currentTarget),
     ) as unknown as SignUpData;
-    const { data: formData, error } = await authClient.signUp.email({
-      name: data.name,
-      email: data.email,
-      password: data.password,
-      requestedRole: role,
-      callbackURL: "/",
-    });
-    if (formData) {
-      router.push("/");
-      toast.add({ type: "success", title: "User created successfully!" });
-    }
-    if (error) {
+
+    setPending(true);
+    try {
+      const { data: formData, error } = await authClient.signUp.email({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        requestedRole: role,
+        callbackURL: "/",
+      });
+      if (error) {
+        toast.add({
+          type: "error",
+          title: "Sign up failed",
+          description:
+            error.message ?? "Something went wrong. Please try again.",
+        });
+        return;
+      }
+      if (formData) {
+        toast.add({
+          type: "success",
+          title: "Account created!",
+          description: "Welcome to PizzaHub.",
+        });
+        router.push("/");
+      }
+    } catch {
       toast.add({
         type: "error",
         title: "Sign up failed",
-        description: error.message ?? "Something went wrong. Please try again.",
+        description: "Something went wrong. Please try again.",
       });
+    } finally {
+      setPending(false);
     }
   }
 
@@ -274,10 +293,13 @@ export default function SignUp() {
 
             <Button
               type="submit"
-              className="group h-14 w-full rounded-xl border-2 border-[#26213A] bg-[#E8452C] text-base font-extrabold text-white shadow-[5px_5px_0_#26213A] transition-all hover:bg-[#E8452C] active:translate-x-[5px] active:translate-y-[5px] active:shadow-none"
+              disabled={pending}
+              className="group h-14 w-full rounded-xl border-2 border-[#26213A] bg-[#E8452C] text-base font-extrabold text-white shadow-[5px_5px_0_#26213A] transition-all hover:bg-[#E8452C] active:translate-x-[5px] active:translate-y-[5px] active:shadow-none disabled:opacity-60"
             >
-              Create account
-              <ArrowRight className="ml-1 size-5 transition-transform group-hover:translate-x-1" />
+              {pending ? "Creating account…" : "Create account"}
+              {!pending && (
+                <ArrowRight className="ml-1 size-5 transition-transform group-hover:translate-x-1" />
+              )}
             </Button>
           </form>
 
